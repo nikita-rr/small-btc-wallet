@@ -1,7 +1,7 @@
 import readline from 'readline';
 import fs from 'fs';
 import fetch from 'node-fetch';
-import { generatePrivateKey, getPublicKeyFromPrivate, getAddressFromPublicKey } from './wallet';
+import { generatePrivateKey, getPublicKeyFromPrivate, getAddressFromPublicKey, createAndSignTransaction } from './wallet';
 
 export async function askPrivateKey(): Promise<string> {
   return new Promise((resolve) => {
@@ -69,5 +69,26 @@ export async function _getOrInitPublicKey(): Promise<string> {
   } else {
     const { publicKey } = await init();
     return publicKey;
+  }
+}
+
+export async function sendBtc(address: string, amount: string) {
+  try {
+    await _getOrInitPublicKey()
+    // Получаем приватный ключ от пользователя
+    const privateKey = await askPrivateKey();
+    // Создаём и подписываем транзакцию
+    const rawTx = await createAndSignTransaction(privateKey, address, parseFloat(amount));
+    // Отправляем транзакцию через blockstream.info
+    const resp = await fetch('https://blockstream.info/api/tx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: rawTx
+    });
+    if (!resp.ok) throw new Error('Ошибка отправки транзакции');
+    const txid = await resp.text();
+    console.log('Транзакция отправлена! TXID:', txid);
+  } catch (e: any) {
+    console.error('Ошибка:', e.message);
   }
 } 
