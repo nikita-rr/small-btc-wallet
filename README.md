@@ -1,4 +1,4 @@
-# Bitcoin CLI Wallet
+# Small Bitcoin CLI Wallet
 
 Консольное приложение на Node.js/TypeScript для управления биткоин-кошельком (P2PKH, mainnet).
 
