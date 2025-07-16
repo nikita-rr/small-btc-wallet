@@ -1,25 +1,29 @@
-import readline from 'readline';
-import { generatePrivateKey, getPublicKeyFromPrivate } from './src/wallet';
+import { Command } from 'commander';
+import fs from 'fs';
+import { init, balance, defaultCommand } from './src/commands';
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+const program = new Command();
 
-console.log('Введите приватный ключ (hex) или нажмите Enter для генерации нового:');
-rl.question('> ', (input: string) => {
-  let privateKey: string;
-  if (!input) {
-    privateKey = generatePrivateKey();
-    console.log('Сгенерирован приватный ключ:', privateKey);
+program
+  .name('crypto-wallet')
+  .description('Консольное приложение для работы с биткоин-кошельком')
+  .version('1.0.0');
+
+program
+  .option('--init', 'Сгенерировать приватный/публичный ключ и сохранить публичный ключ в файл')
+  .option('--balance', 'Показать баланс по адресу, используя сохранённый публичный ключ');
+
+program.parse(process.argv);
+const options = program.opts();
+
+async function main() {
+  if (options.init) {
+    await init();
+  } else if (options.balance) {
+    await balance();
   } else {
-    privateKey = input.trim();
+    await defaultCommand();
   }
-  try {
-    const publicKey = getPublicKeyFromPrivate(privateKey);
-    console.log('Публичный ключ:', publicKey);
-  } catch (e: any) {
-    console.error('Ошибка:', e.message);
-  }
-  rl.close();
-}); 
+}
+
+main(); 

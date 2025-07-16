@@ -11,11 +11,15 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "commander": "^11.1.0",
     "ecpair": "3.0.0",
-    "tiny-secp256k1": "^2.2.3"
+    "node-fetch": "^2.6.7",
+    "tiny-secp256k1": "^2.2.3",
+    "bitcoinjs-lib": "^6.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "ts-node": "^10.0.0"
+    "@types/node-fetch": "^2.6.12",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.0.0"
   }
 }
