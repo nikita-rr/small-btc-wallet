@@ -43,16 +43,36 @@ export async function createAndSignTransaction(privateKeyHex: string, toAddress:
   const utxos = await utxoResp.json();
   if (!Array.isArray(utxos) || utxos.length === 0) throw new Error('Нет средств для отправки');
 
+  // Получаем актуальную комиссию (sat/vByte)
+  const feeResp = await fetch('https://blockstream.info/api/fee-estimates');
+  if (!feeResp.ok) throw new Error('Ошибка получения комиссии');
+  const feeData = await feeResp.json();
+  // Берём комиссию для подтверждения в 1 блок (можно изменить на 3 или 6 для экономии)
+  const feeRate = Math.ceil(feeData["1"] || 10); // sat/vByte
+
   // Считаем сумму и выбираем UTXO
   let total = 0;
   const selectedUtxos = [];
   const satoshiAmount = Math.round(amountBtc * 1e8);
+  // Оценка размера транзакции: 180 байт на вход, 34 байта на выход, 10 байт на структуру
+  // Для простоты: 1 вход = 180, 2 выхода = 2*34, +10
+  // Позже пересчитаем точнее
+  let inputCount = 0;
   for (const utxo of utxos) {
     selectedUtxos.push(utxo);
     total += utxo.value;
-    if (total >= satoshiAmount + 1000) break; // 1000 сатоши на комиссию
+    inputCount++;
+    // Оценка размера транзакции
+    const outputCount = 2; // получатель + сдача
+    const txSize = inputCount * 180 + outputCount * 34 + 10;
+    const fee = feeRate * txSize;
+    if (total >= satoshiAmount + fee) break;
   }
-  if (total < satoshiAmount + 1000) throw new Error('Недостаточно средств (с учётом комиссии)');
+  // Финальный расчёт размера и комиссии
+  const outputCount = 2;
+  const txSize = inputCount * 180 + outputCount * 34 + 10;
+  const fee = feeRate * txSize;
+  if (total < satoshiAmount + fee) throw new Error('Недостаточно средств (с учётом комиссии)');
 
   // Формируем транзакцию
   const { TransactionBuilder, networks } = require('bitcoinjs-lib');
@@ -62,7 +82,7 @@ export async function createAndSignTransaction(privateKeyHex: string, toAddress:
     txb.addInput(utxo.txid, utxo.vout);
   }
   txb.addOutput(toAddress, satoshiAmount);
-  const change = total - satoshiAmount - 1000;
+  const change = total - satoshiAmount - fee;
   if (change > 0) {
     txb.addOutput(fromAddress, change);
   }
